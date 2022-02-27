@@ -4,6 +4,16 @@ from ._common_blocks import Conv2dBn
 from ._utils import freeze_model, filter_keras_submodules
 from ..backbones.backbones_factory import Backbones
 
+from tensorflow.keras.layers import (
+        Input,
+        concatenate,
+        LSTM,
+        Lambda,
+        Reshape,
+    )
+
+
+
 backend = None
 layers = None
 models = None
@@ -118,7 +128,17 @@ def build_unet(
 ):
     input_ = backbone.input
     x = backbone.output
-
+    #----- LSTM Code -----------
+    
+    input2 = Input((64, 320), batch_size=32, name="Input2")
+    y = input2
+    
+    y = LSTM(64, dropout = 0.4, recurrent_dropout = 0.4, return_sequences=True)(y)
+    y = LSTM(64, dropout = 0.4, recurrent_dropout = 0.4, return_sequences=True)(y)
+    y = Lambda(convertrevhilbert, name="Lambda_Layer")(y)
+    y = Reshape((8,8,64))(y)
+    #-------------------------------
+    x = concatenate([x, y])
     # extract skip connections
     skips = ([backbone.get_layer(name=i).output if isinstance(i, str)
               else backbone.get_layer(index=i).output for i in skip_connection_layers])
@@ -150,7 +170,7 @@ def build_unet(
     x = layers.Activation(activation, name=activation)(x)
 
     # create keras model instance
-    model = models.Model(input_, x)
+    model = models.Model([input_, input2], x)
 
     return model
 
