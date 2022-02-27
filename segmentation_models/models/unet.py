@@ -4,6 +4,7 @@ from ._common_blocks import Conv2dBn
 from ._utils import freeze_model, filter_keras_submodules
 from ..backbones.backbones_factory import Backbones
 
+import tensorflow as tf
 from tensorflow.keras.layers import (
         Input,
         concatenate,
@@ -112,6 +113,15 @@ def DecoderTransposeX2Block(filters, stage, use_batchnorm=False):
     return layer
 
 
+def convertrevhilbert(inputs):
+    converted = []
+    revhil=[21, 22, 25, 26, 37, 38, 41, 42, 20, 23, 24, 27, 36, 39, 40, 43, 19, 18, 29, 28, 35, 34, 45, 44, 16, 17, 30, 31, 32, 33, 46, 47, 15, 12, 11, 10, 53, 52, 51, 48, 14, 13, 8, 9, 54, 55, 50, 49, 1, 2, 7, 6, 57, 56, 61, 62, 0, 3, 4, 5, 58, 59, 60, 63]
+    for i in range(0,64):
+        converted.append( inputs[:, :, revhil[i]])
+    
+    converted = tf.stack(converted, axis=1)
+    return converted
+
 # ---------------------------------------------------------------------
 #  Unet Decoder
 # ---------------------------------------------------------------------
@@ -139,6 +149,7 @@ def build_unet(
     y = Reshape((8,8,64))(y)
     #-------------------------------
     x = concatenate([x, y])
+    print(x.shape)
     # extract skip connections
     skips = ([backbone.get_layer(name=i).output if isinstance(i, str)
               else backbone.get_layer(index=i).output for i in skip_connection_layers])
